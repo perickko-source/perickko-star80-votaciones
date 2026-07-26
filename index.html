@@ -17,6 +17,7 @@
         }
         h1 { color: #1db954; }
         
+        /* REPRODUCTOR FLOTANTE */
         #player-container {
             width: 100%;
             max-width: 600px;
@@ -25,8 +26,15 @@
             border-radius: 10px;
             margin-bottom: 30px;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            /* Sombra más marcada para que destaque al hacer scroll */
+            box-shadow: 0 8px 15px rgba(0,0,0,0.6); 
+            
+            /* Propiedades mágicas para que se quede flotando */
+            position: sticky;
+            top: 0;
+            z-index: 1000; /* Asegura que esté siempre por encima de las canciones */
         }
+        
         #now-playing { font-size: 1.2em; margin-bottom: 15px; color: #b3b3b3; }
         audio { width: 100%; }
 
@@ -95,7 +103,7 @@
 </head>
 <body>
 
-    <h1>🎵 Escucha y vota</h1>
+    <h1> Escucha y vota</h1>
 
     <div id="player-container">
         <div id="now-playing">Selecciona una canción</div>
@@ -135,7 +143,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- TUS CANCIONES (Actualizado a .ogg) ---
+        // --- TUS CANCIONES ---
         const canciones = [
             { id: 1, titulo: "Star 80 Bye 6 - Perickko", src: "perickko-Star_80_Bye_6.ogg" },
             { id: 2, titulo: "Sintonia Star 80 - Juanma Lógar", src: "Juanma_Lógar-Sintonia_Star_80.ogg" },
@@ -160,7 +168,7 @@
 
         // Variables de estado
         let cancionVotadaId = localStorage.getItem('cancionVotadaId') ? parseInt(localStorage.getItem('cancionVotadaId')) : null;
-        let cancionActualId = null; // Para saber cuál está sonando ahora
+        let cancionActualId = null; 
         let votos = {};
 
         // Inicializar documentos en Firestore si no existen
@@ -270,16 +278,13 @@
         audioPlayer.addEventListener('ended', () => {
             if (cancionActualId === null) return;
 
-            // Buscamos el índice de la canción actual en la lista original
             const indiceActual = canciones.findIndex(c => c.id === cancionActualId);
             let indiceSiguiente = indiceActual + 1;
 
-            // Si es la última, volvemos a la primera (bucle)
             if (indiceSiguiente >= canciones.length) {
                 indiceSiguiente = 0;
             }
 
-            // Reproducimos la siguiente
             reproducirCancion(canciones[indiceSiguiente].id);
         });
 
