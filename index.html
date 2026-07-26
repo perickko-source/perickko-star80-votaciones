@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reproductor y Votaciones Star 80</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { color: #1db954; }
+        
+        #player-container {
+            width: 100%;
+            max-width: 600px;
+            background: #282828;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        #now-playing { font-size: 1.2em; margin-bottom: 15px; color: #b3b3b3; }
+        audio { width: 100%; }
+
+        #song-list {
+            width: 100%;
+            max-width: 600px;
+        }
+        .song-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #181818;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .song-item:hover { background: #282828; }
+        
+        .song-title {
+            cursor: pointer;
+            font-size: 1.1em;
+            flex-grow: 1;
+        }
+        .song-title.active { color: #1db954; font-weight: bold; }
+
+        .vote-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .vote-count { font-size: 0.9em; color: #b3b3b3; min-width: 60px; text-align: right; }
+        
+        .vote-btn {
+            background: #1db954;
+            border: none;
+            color: black;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, background 0.2s;
+        }
+        .vote-btn:hover:not(:disabled) { transform: scale(1.05); }
+        .vote-btn:active:not(:disabled) { transform: scale(0.95); }
+
+        /* Estilo para el botón de la canción por la que YA votaste */
+        .vote-btn.voted {
+            background: #555555;
+            color: #ffffff;
+            cursor: default;
+        }
+
+        /* Estilo para los botones bloqueados (cuando ya votaste por otra) */
+        .vote-btn.locked {
+            background: #2a2a2a;
+            color: #666666;
+            cursor: not-allowed;
+            border: 1px solid #333;
+        }
+
+        .vote-btn:disabled {
+            opacity: 1; 
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎵 Escucha y vota</h1>
+
+    <div id="player-container">
+        <div id="now-playing">Selecciona una canción</div>
+        <audio id="audioPlayer" controls></audio>
+    </div>
+
+    <div id="song-list">
+        <!-- Las canciones se generarán aquí con JavaScript -->
+    </div>
+
+    <!-- Firebase SDK (versión modular) -->
+    <script type="module">
+        // Importar Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            updateDoc, 
+            onSnapshot,
+            collection
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // --- TU CONFIGURACIÓN DE FIREBASE ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrKWmPTSD82lZ-15DxT2RqjCycXRQHUU",
+            authDomain: "star80-votaciones.firebaseapp.com",
+            projectId: "star80-votaciones",
+            storageBucket: "star80-votaciones.firebasestorage.app",
+            messagingSenderId: "88521754490",
+            appId: "1:88521754490:web:70f4f57f213dc1adeaf8c3",
+            measurementId: "G-590QN784SS"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- TUS CANCIONES (Actualizado a .ogg) ---
+        const canciones = [
+            { id: 1, titulo: "Star 80 Bye 6 - Perickko", src: "perickko-Star_80_Bye_6.ogg" },
+            { id: 2, titulo: "Sintonia Star 80 - Juanma Lógar", src: "Juanma_Lógar-Sintonia_Star_80.ogg" },
+            { id: 3, titulo: "Star 80 (Cierre del programa) - Dj. Boltor", src: "Dj_Boltor-Star_80_(Cierre_del_programa).ogg" },
+            { id: 4, titulo: "Star 80 Sintonía final II - Dj Mayet76", src: "Dj_Mayet76-Star_80_Sintonía_final_II.ogg" },
+            { id: 5, titulo: "Star 80 Bye 5 - Perickko", src: "Perickko-Star_80_Bye_5.ogg" },
+            { id: 6, titulo: "Cierre Star 80 - 2 - Joselus51", src: "Joselus51-Cierre_Star_80_-_2.ogg" },
+            { id: 7, titulo: "Perickko y Mickky - Perickko", src: "Perickko-Perickko_y_Mickky.ogg" },
+            { id: 8, titulo: "Sintonía final - Dj Mayet", src: "Dj_Mayet-Sintonía_final.ogg" },
+            { id: 9, titulo: "Star 80 bye bye - Perickko", src: "Perickko-Star_80_bye_bye.ogg" },
+            { id: 10, titulo: "Star 80 (2) - EsMaOn", src: "EsMaOn-Star_80_(2).ogg" },
+            { id: 11, titulo: "Star 80 - EsMaOn", src: "EsMaOn-Star_80.ogg" },
+            { id: 12, titulo: "Neon Heartbeat - Pepino", src: "Pepino-Neon_Heartbeat.ogg" },
+            { id: 13, titulo: "Star 80 Bye 1 - Perickko", src: "Perickko-Star_80_Bye_1.ogg" },
+            { id: 14, titulo: "Sintonia De Cierre - Pepino", src: "Pepino-Sintonia_De_Cierre.ogg" },  
+        ];
+
+        // --- ELEMENTOS DEL DOM ---
+        const audioPlayer = document.getElementById('audioPlayer');
+        const nowPlayingText = document.getElementById('now-playing');
+        const songListContainer = document.getElementById('song-list');
+
+        // Variables de estado
+        let cancionVotadaId = localStorage.getItem('cancionVotadaId') ? parseInt(localStorage.getItem('cancionVotadaId')) : null;
+        let cancionActualId = null; // Para saber cuál está sonando ahora
+        let votos = {};
+
+        // Inicializar documentos en Firestore si no existen
+        async function inicializarVotos() {
+            for (const cancion of canciones) {
+                const docRef = doc(db, 'votos', cancion.id.toString());
+                const docSnap = await getDoc(docRef);
+                
+                if (!docSnap.exists()) {
+                    await setDoc(docRef, { votos: 0 });
+                }
+            }
+        }
+
+        // Escuchar cambios en tiempo real
+        function escucharVotos() {
+            onSnapshot(collection(db, 'votos'), (snapshot) => {
+                snapshot.forEach((doc) => {
+                    votos[doc.id] = doc.data().votos;
+                });
+                renderizarLista();
+            });
+        }
+
+        // Función para reproducir una canción por su ID
+        function reproducirCancion(id) {
+            const cancion = canciones.find(c => c.id === id);
+            if (cancion) {
+                audioPlayer.src = cancion.src;
+                audioPlayer.play();
+                nowPlayingText.innerText = "Sonando: " + cancion.titulo;
+                cancionActualId = id;
+
+                // Actualizar estilo visual
+                document.querySelectorAll('.song-title').forEach(el => el.classList.remove('active'));
+                const titleEl = document.querySelector(`.song-title[data-id="${id}"]`);
+                if (titleEl) titleEl.classList.add('active');
+            }
+        }
+
+        // Renderizar la lista de canciones (Ordenadas por votos)
+        function renderizarLista() {
+            songListContainer.innerHTML = '';
+            
+            // Ordenar de más votada a menos votada
+            const cancionesOrdenadas = [...canciones].sort((a, b) => (votos[b.id] || 0) - (votos[a.id] || 0));
+
+            cancionesOrdenadas.forEach(cancion => {
+                const div = document.createElement('div');
+                div.className = 'song-item';
+                
+                let claseBoton = 'vote-btn';
+                let textoBoton = '👍 Votar';
+                let deshabilitado = false;
+
+                // Lógica de un solo voto por usuario
+                if (cancionVotadaId !== null) {
+                    deshabilitado = true; 
+                    if (cancionVotadaId === cancion.id) {
+                        claseBoton += ' voted';
+                        textoBoton = '✅ Tu voto';
+                    } else {
+                        claseBoton += ' locked';
+                        textoBoton = '🔒 Ya votaste';
+                    }
+                }
+
+                div.innerHTML = `
+                    <span class="song-title" data-id="${cancion.id}" data-src="${cancion.src}">${cancion.titulo}</span>
+                    <div class="vote-section">
+                        <span class="vote-count">${votos[cancion.id] || 0} votos</span>
+                        <button class="${claseBoton}" data-id="${cancion.id}" ${deshabilitado ? 'disabled' : ''}>${textoBoton}</button>
+                    </div>
+                `;
+                songListContainer.appendChild(div);
+            });
+        }
+
+        // Votar en Firebase
+        async function votarCancion(id) {
+            const docRef = doc(db, 'votos', id.toString());
+            const docSnap = await getDoc(docRef);
+            const votosActuales = docSnap.data().votos;
+            
+            await updateDoc(docRef, { votos: votosActuales + 1 });
+            
+            cancionVotadaId = id;
+            localStorage.setItem('cancionVotadaId', id);
+        }
+
+        // Event Listener para clicks en la lista
+        songListContainer.addEventListener('click', function(e) {
+            // Si clic en el título (Reproducir)
+            if (e.target.classList.contains('song-title')) {
+                const id = parseInt(e.target.getAttribute('data-id'));
+                reproducirCancion(id);
+            }
+            
+            // Si clic en votar
+            if (e.target.classList.contains('vote-btn') && cancionVotadaId === null) {
+                const id = parseInt(e.target.getAttribute('data-id'));
+                votarCancion(id);
+            }
+        });
+
+        // 🎵 Cuando termina una canción, suena la siguiente
+        audioPlayer.addEventListener('ended', () => {
+            if (cancionActualId === null) return;
+
+            // Buscamos el índice de la canción actual en la lista original
+            const indiceActual = canciones.findIndex(c => c.id === cancionActualId);
+            let indiceSiguiente = indiceActual + 1;
+
+            // Si es la última, volvemos a la primera (bucle)
+            if (indiceSiguiente >= canciones.length) {
+                indiceSiguiente = 0;
+            }
+
+            // Reproducimos la siguiente
+            reproducirCancion(canciones[indiceSiguiente].id);
+        });
+
+        // Iniciar la app
+        inicializarVotos().then(() => {
+            escucharVotos();
+        });
+    </script>
+</body>
+</html>
