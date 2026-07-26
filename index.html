@@ -5,34 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reproductor y Votaciones Star 80</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #121212;
             color: #ffffff;
             margin: 0;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            min-height: 100vh;
         }
-        h1 { color: #1db954; }
         
-        /* REPRODUCTOR FLOTANTE */
+        h1 { 
+            color: #1db954; 
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        /* Contenedor principal para centrar todo */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* REPRODUCTOR FLOTANTE - Compatible con móviles */
         #player-container {
             width: 100%;
-            max-width: 600px;
             background: #282828;
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 30px;
             text-align: center;
-            /* Sombra más marcada para que destaque al hacer scroll */
-            box-shadow: 0 8px 15px rgba(0,0,0,0.6); 
+            box-shadow: 0 8px 15px rgba(0,0,0,0.6);
             
-            /* Propiedades mágicas para que se quede flotando */
+            /* Propiedades para que se quede flotando (compatible con Safari/iOS) */
+            position: -webkit-sticky;
             position: sticky;
-            top: 0;
-            z-index: 1000; /* Asegura que esté siempre por encima de las canciones */
+            top: 10px; 
+            z-index: 1000;
         }
         
         #now-playing { font-size: 1.2em; margin-bottom: 15px; color: #b3b3b3; }
@@ -40,8 +52,8 @@
 
         #song-list {
             width: 100%;
-            max-width: 600px;
         }
+        
         .song-item {
             display: flex;
             justify-content: space-between;
@@ -81,14 +93,12 @@
         .vote-btn:hover:not(:disabled) { transform: scale(1.05); }
         .vote-btn:active:not(:disabled) { transform: scale(0.95); }
 
-        /* Estilo para el botón de la canción por la que YA votaste */
         .vote-btn.voted {
             background: #555555;
             color: #ffffff;
             cursor: default;
         }
 
-        /* Estilo para los botones bloqueados (cuando ya votaste por otra) */
         .vote-btn.locked {
             background: #2a2a2a;
             color: #666666;
@@ -103,15 +113,17 @@
 </head>
 <body>
 
-    <h1> Escucha y vota</h1>
+    <h1>🎵 Escucha y vota</h1>
 
-    <div id="player-container">
-        <div id="now-playing">Selecciona una canción</div>
-        <audio id="audioPlayer" controls></audio>
-    </div>
+    <div class="container">
+        <div id="player-container">
+            <div id="now-playing">Selecciona una canción</div>
+            <audio id="audioPlayer" controls></audio>
+        </div>
 
-    <div id="song-list">
-        <!-- Las canciones se generarán aquí con JavaScript -->
+        <div id="song-list">
+            <!-- Las canciones se generarán aquí con JavaScript -->
+        </div>
     </div>
 
     <!-- Firebase SDK (versión modular) -->
@@ -274,7 +286,7 @@
             }
         });
 
-        // 🎵 Cuando termina una canción, suena la siguiente
+        //  Cuando termina una canción, suena la siguiente
         audioPlayer.addEventListener('ended', () => {
             if (cancionActualId === null) return;
 
